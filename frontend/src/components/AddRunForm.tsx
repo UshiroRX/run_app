@@ -1,11 +1,17 @@
 "use client";
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import api from "../lib/api";
+
+const Map = dynamic(() => import("./MapComponent"), { ssr: false });
 
 export default function AddRunForm({ onAdd }: { onAdd: (run: any) => void }) {
   const [distance, setDistance] = useState<number | "">("");
   const [time, setTime] = useState<number | "">("");
   const [location, setLocation] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -14,15 +20,24 @@ export default function AddRunForm({ onAdd }: { onAdd: (run: any) => void }) {
     setError("");
     setLoading(true);
     try {
-      const res = await api.post("/runs", {
-        distance: Number(distance),
-        time: Number(time),
-        location,
+      const formData = new FormData();
+      formData.append("distance", String(distance));
+      formData.append("time", String(time));
+      formData.append("location", location);
+      if (photo) formData.append("photo", photo);
+      if (lat !== null) formData.append("lat", String(lat));
+      if (lng !== null) formData.append("lng", String(lng));
+
+      const res = await api.post("/runs", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
       onAdd(res.data);
       setDistance("");
       setTime("");
       setLocation("");
+      setPhoto(null);
+      setLat(null);
+      setLng(null);
     } catch (err: any) {
       setError(err.response?.data?.message || "Failed to add run");
     } finally {
@@ -40,6 +55,7 @@ export default function AddRunForm({ onAdd }: { onAdd: (run: any) => void }) {
       <form
         className="flex flex-col md:flex-row gap-4 items-end"
         onSubmit={handleSubmit}
+        encType="multipart/form-data"
       >
         <div className="flex-1">
           <label className="block text-sm font-medium mb-1 text-blue-700">
@@ -83,6 +99,33 @@ export default function AddRunForm({ onAdd }: { onAdd: (run: any) => void }) {
             onChange={(e) => setLocation(e.target.value)}
             required
           />
+        </div>
+        <div className="flex-1">
+          <label className="block text-sm font-medium mb-1 text-blue-700">
+            Фото
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setPhoto(e.target.files?.[0] || null)}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block text-sm font-medium mb-1 text-blue-700">
+            Место на карте
+          </label>
+          <Map
+            onSelect={(lat, lng) => {
+              setLat(lat);
+              setLng(lng);
+            }}
+          />
+          {lat && lng && (
+            <div className="text-xs text-gray-500 mt-1">
+              Выбрано: {lat.toFixed(5)}, {lng.toFixed(5)}
+            </div>
+          )}
         </div>
         <button
           type="submit"

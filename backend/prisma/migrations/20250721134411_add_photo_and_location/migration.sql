@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Run" ADD COLUMN "lat" REAL;
+ALTER TABLE "Run" ADD COLUMN "lng" REAL;
+ALTER TABLE "Run" ADD COLUMN "photoUrl" TEXT;
